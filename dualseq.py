@@ -12,7 +12,7 @@ import re
 # 1. Load the Training Dataset and Rename Columns
 #############################################
 
-data_path = "./data/train.tsv"
+data_path = "./data/SlangIJCNLP/train.tsv"
 # If your file does not include a header row, use header=None.
 # In our case, we specify header=None and then assign custom column names.
 df = pd.read_csv(data_path, sep="\t", header=None)
@@ -43,8 +43,11 @@ SPECIAL_TOKENS = [PAD_TOKEN, SOS_TOKEN, EOS_TOKEN, UNK_TOKEN]
 
 def tokenize_text(text):
     # Simple whitespace and punctuation tokenization; adjust as needed.
-    text = text.lower().strip()
-    return re.findall(r"\w+|[^\w\s]", text)
+    try:
+        text = text.lower().strip()
+        return re.findall(r"\w+|[^\w\s]", text)
+    except Exception as e:
+        print('uhoh')
 
 def build_vocab(sentences, special_tokens=SPECIAL_TOKENS):
     vocab = {}
@@ -77,9 +80,9 @@ def build_char_vocab(texts, special_tokens=SPECIAL_TOKENS):
 # - Use context from the "sentence" column (word-level)
 # - Use explanation from the "explanation" column (target words for generation)
 # - Use the target non-standard expression from the "target" column (character-level)
-word_vocab = build_vocab(df["sentence"].tolist())
-explanation_vocab = build_vocab(df["explanation"].tolist())  # for explanation output tokens
-char_vocab = build_char_vocab(df["target"].tolist())
+word_vocab = build_vocab(df["sentence"].map(str).tolist())
+explanation_vocab = build_vocab(df["explanation"].map(str).tolist())  # for explanation output tokens
+char_vocab = build_char_vocab(df["target"].map(str).tolist())
 
 print("Word vocab size:", len(word_vocab))
 print("Explanation vocab size:", len(explanation_vocab))
@@ -106,8 +109,8 @@ class SlangDataset(Dataset):
     def encode_explanation(self, explanation):
         # Tokenize explanation and add SOS and EOS tokens.
         tokens = tokenize_text(explanation)
-        return ([self.explanation_vocab[SOS_TOKEN]] + 
-                [self.explanation_vocab.get(tok, self.explanation_vocab[UNK_TOKEN]) for tok in tokens] + 
+        return ([self.explanation_vocab[SOS_TOKEN]] +
+                [self.explanation_vocab.get(tok, self.explanation_vocab[UNK_TOKEN]) for tok in tokens] +
                 [self.explanation_vocab[EOS_TOKEN]])
 
     def encode_target(self, target):
